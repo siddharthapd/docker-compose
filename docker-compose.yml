@@ -1,0 +1,99 @@
+version: '3'
+services:
+  config-server:
+    container_name: config-server
+    build:
+      context: /opt/javadev/workspace/config-server
+      dockerfile: Dockerfile
+    image: config-server:latest
+    expose:
+      - 18081
+    networks:
+      - techopedia-cloud-network
+    volumes:
+      - /opt/javadev/workspace/config-repo:/config-repo
+      - /opt/javadev/logs:/opt/javadev/logs
+
+  eureka-server:
+    container_name: eureka-server
+    build:
+      context: /opt/javadev/workspace/eureka-server
+      dockerfile: Dockerfile
+    image: eureka-server:latest
+    entrypoint: /opt/eureka-server-entrypoint.sh
+    expose:
+      - 18082
+    ports:
+      - 18082:18082
+    networks:
+      - techopedia-cloud-network
+    volumes:
+      - /opt/javadev/logs:/opt/javadev/logs
+    links:
+      - config-server:config-server
+    depends_on:
+      - config-server
+  
+  gateway-server:
+    container_name: gateway-server
+    build:
+      context: /opt/javadev/workspace/gateway-server
+      dockerfile: Dockerfile
+    image: gateway-server:latest
+    entrypoint: /opt/gateway-server-entrypoint.sh
+    expose:
+      - 8080
+    ports:
+      - 8080:8080
+    networks:
+      - techopedia-cloud-network
+    volumes:
+      - /opt/javadev/logs:/opt/javadev/logs
+    links:
+      - config-server:config-server
+      - eureka-server:eureka-server
+    depends_on:
+      - config-server
+      - eureka-server
+  
+  security-service:
+    build:
+      context: /opt/javadev/workspace/security-service
+      dockerfile: Dockerfile
+    image: security-service:latest
+    entrypoint: /opt/security-service-entrypoint.sh
+    ports:
+      - 18083
+    networks:
+      - techopedia-cloud-network
+    volumes:
+      - /opt/javadev/logs:/opt/javadev/logs
+    links:
+      - config-server:config-server
+      - eureka-server:eureka-server
+    depends_on:
+      - config-server
+      - eureka-server
+
+  registration-service:
+    build:
+      context: /opt/javadev/workspace/registration-service
+      dockerfile: Dockerfile
+    image: registration-service:latest
+    entrypoint: /opt/registration-service-entrypoint.sh
+    ports:
+      - 18084
+    networks:
+      - techopedia-cloud-network
+    volumes:
+      - /opt/javadev/logs:/opt/javadev/logs
+    links:
+      - config-server:config-server
+      - eureka-server:eureka-server
+    depends_on:
+      - config-server
+      - eureka-server
+
+networks:
+  techopedia-cloud-network:
+    driver: bridge
